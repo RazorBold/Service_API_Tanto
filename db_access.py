@@ -1,15 +1,10 @@
-from sshtunnel import SSHTunnelForwarder
 import pymysql
 from pprint import pprint
 import requests
 import time
 from datetime import datetime
 
-# Database Configuration
-SSH_HOST = '36.92.168.182'
-SSH_PORT = 22
-SSH_USERNAME = 'nociot'
-SSH_PASSWORD = 'telkom!@#321'
+# Database Configuration for local access
 DB_HOST = '127.0.0.1'
 DB_PORT = 3306
 DB_USER = 'admin'
@@ -80,29 +75,21 @@ def save_tracking_data(connection, tracking_data):
         connection.commit()
         return True
 
-def create_ssh_tunnel():
-    return SSHTunnelForwarder(
-        (SSH_HOST, SSH_PORT),
-        ssh_username=SSH_USERNAME,
-        ssh_password=SSH_PASSWORD,
-        remote_bind_address=(DB_HOST, DB_PORT)
+def get_db_connection():
+    """Create database connection"""
+    return pymysql.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        cursorclass=pymysql.cursors.DictCursor
     )
 
 def process_devices():
     """Main processing function"""
-    server = create_ssh_tunnel()
     try:
-        server.start()
-        print("✅ SSH Tunnel established")
-        
-        connection = pymysql.connect(
-            host=DB_HOST,
-            port=server.local_bind_port,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            database=DB_NAME,
-            cursorclass=pymysql.cursors.DictCursor
-        )
+        connection = get_db_connection()
         print("✅ Database connected")
         
         # Create table if not exists
@@ -139,7 +126,6 @@ def process_devices():
     finally:
         if 'connection' in locals():
             connection.close()
-        server.stop()
 
 if __name__ == "__main__":
     print("🚀 Starting continuous tracking service...")
